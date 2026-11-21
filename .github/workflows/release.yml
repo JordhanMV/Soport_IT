@@ -35,15 +35,25 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          $assets = @(Get-ChildItem release -File | Where-Object {
-            $_.Name -match '\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml'
-          })
-          if (-not ($assets.Name -contains 'latest.yml')) {
+          $installers = @(Get-ChildItem release -File | Where-Object { $_.Name -match '\.exe$' })
+          $blockmaps = @(Get-ChildItem release -File | Where-Object { $_.Name -match '\.exe\.blockmap$' })
+          $metadata = @(Get-ChildItem release -File | Where-Object { $_.Name -eq 'latest.yml' })
+          if ($metadata.Count -ne 1) {
             throw 'The latest.yml updater metadata was not generated.'
           }
-          if (-not ($assets.Name | Where-Object { $_ -match '\.exe$' })) {
+          if ($installers.Count -ne 1 -or $blockmaps.Count -ne 1) {
             throw 'The Windows installer was not generated.'
           }
-          $assetPaths = @($assets | ForEach-Object { $_.FullName })
+          $version = $env:RELEASE_TAG -replace '^v', ''
+          $installerName = "Inventario-de-soporte-Setup-$version.exe"
+          $installerPath = Join-Path $installers[0].DirectoryName $installerName
+          $blockmapPath = "$installerPath.blockmap"
+          Rename-Item -LiteralPath $installers[0].FullName -NewName $installerName
+          Rename-Item -LiteralPath $blockmaps[0].FullName -NewName "$installerName.blockmap"
+          $assetPaths = @(
+            $installerPath
+            $blockmapPath
+            $metadata[0].FullName
+          )
           gh release upload $env:RELEASE_TAG @assetPaths --clobber
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
