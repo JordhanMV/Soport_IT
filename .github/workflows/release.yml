@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing version tag to publish or repair, for example v1.1.0
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -23,3 +29,21 @@ jobs:
       - run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Ensure updater files are attached to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          $assets = @(Get-ChildItem release -File | Where-Object {
+            $_.Name -match '\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml'
+          })
+          if (-not ($assets.Name -contains 'latest.yml')) {
+            throw 'The latest.yml updater metadata was not generated.'
+          }
+          if (-not ($assets.Name | Where-Object { $_ -match '\.exe$' })) {
+            throw 'The Windows installer was not generated.'
+          }
+          $assetPaths = @($assets | ForEach-Object { $_.FullName })
+          gh release upload $env:RELEASE_TAG @assetPaths --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
