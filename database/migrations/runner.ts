@@ -1,6 +1,7 @@
 import { initialSchemaMigration } from './001-initial-schema'
 import { equipmentSpecificationsMigration } from './002-equipment-specifications'
 import { equipmentMaintenanceMigration } from './003-equipment-maintenance'
+import { passwordManagerMigration } from './004-password-manager'
 
 export interface Migration {
   id: string
@@ -12,7 +13,7 @@ interface MigrationDatabase {
   prepare<T>(sql: string): { all(...params: unknown[]): T[] }
 }
 
-const migrations: Migration[] = [initialSchemaMigration, equipmentSpecificationsMigration, equipmentMaintenanceMigration]
+const migrations: Migration[] = [initialSchemaMigration, equipmentSpecificationsMigration, equipmentMaintenanceMigration, passwordManagerMigration]
 
 export function runMigrations(database: MigrationDatabase): void {
   database.exec(`

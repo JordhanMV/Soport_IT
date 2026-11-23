@@ -1,6 +1,6 @@
 import { PropsWithChildren } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Desktop20Regular, People20Regular, Home20Regular, Memory16Regular, Building20Regular } from '@fluentui/react-icons'
+import { Desktop20Regular, People20Regular, Home20Regular, Memory16Regular, Building20Regular, Key20Regular } from '@fluentui/react-icons'
 import { Button } from '@fluentui/react-components'
 import { UpdateNotice } from './UpdateNotice'
 
@@ -10,6 +10,7 @@ const links = [
   { to: '/equipos', label: 'Equipos', Icon: Desktop20Regular },
   { to: '/componentes', label: 'Componentes', Icon: Memory16Regular },
   { to: '/areas', label: 'Áreas', Icon: Building20Regular },
+  { to: '/contrasenas', label: 'Contraseñas', Icon: Key20Regular },
 ]
 
 export function Shell({ children }: PropsWithChildren) {

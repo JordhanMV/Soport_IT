@@ -2,7 +2,7 @@ import initSqlJs, { Database as SqlDatabase, SqlValue } from 'sql.js'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { runMigrations } from '../migrations/runner'
-import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, Person, PersonInput, Area } from '../../src/shared/types'
+import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area } from '../../src/shared/types'
 
 interface Db {
   pragma(value: string): void
@@ -233,6 +233,55 @@ export class SqliteInventoryRepository {
   deleteArea(id: number): void {
     const result = this.db.prepare('DELETE FROM areas WHERE id = ?').run(id)
     if (!result.changes) throw new Error('No se encontró el área.')
+  }
+
+  listPasswords(search = '', decrypt: (value: string) => string = (value) => value): PasswordEntry[] {
+    const term = `%${search.trim()}%`
+    const rows = this.db.prepare(`
+      SELECT id, title, username, password_ciphertext AS passwordCiphertext, url, notes,
+        created_at AS createdAt, updated_at AS updatedAt
+      FROM passwords
+      WHERE title LIKE ? OR username LIKE ? OR url LIKE ? OR notes LIKE ?
+      ORDER BY title COLLATE NOCASE
+    `).all(term, term, term, term) as (Omit<PasswordEntry, 'password'> & { passwordCiphertext: string })[]
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      username: row.username,
+      password: decrypt(row.passwordCiphertext),
+      url: row.url,
+      notes: row.notes,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }))
+  }
+
+  savePassword(input: PasswordInput, id?: number, encrypt: (value: string) => string = (value) => value): PasswordEntry {
+    const title = required(input.title, 'El título de la contraseña es obligatorio.')
+    const password = required(input.password, 'La contraseña es obligatoria.')
+    const ciphertext = encrypt(password)
+    if (id) {
+      const result = this.db.prepare(`
+        UPDATE passwords SET title = ?, username = ?, password_ciphertext = ?, url = ?, notes = ?, updated_at = datetime('now')
+        WHERE id = ?
+      `).run(title, clean(input.username), ciphertext, clean(input.url), clean(input.notes), id)
+      if (!result.changes) throw new Error('No se encontró la contraseña.')
+    } else {
+      this.db.prepare(`
+        INSERT INTO passwords (title, username, password_ciphertext, url, notes)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(title, clean(input.username), ciphertext, clean(input.url), clean(input.notes))
+    }
+    const passwordId = id ?? Number(this.db.prepare<{ id: number }>('SELECT last_insert_rowid() AS id').get()?.id)
+    const saved = this.listPasswords('', (value) => value).find((item) => item.id === passwordId)
+    if (!saved) throw new Error('No se pudo recuperar la contraseña guardada.')
+    saved.password = password
+    return saved
+  }
+
+  deletePassword(id: number): void {
+    const result = this.db.prepare('DELETE FROM passwords WHERE id = ?').run(id)
+    if (!result.changes) throw new Error('No se encontró la contraseña.')
   }
 }
 

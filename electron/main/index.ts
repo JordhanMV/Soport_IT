@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage } from 'electron'
 import { join } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { SqliteInventoryRepository } from '../../database/repository/sqlite-inventory-repository'
@@ -34,7 +34,7 @@ app.whenReady().then(async () => {
   const databaseDirectory = join(app.getPath('userData'), 'database')
   mkdirSync(databaseDirectory, { recursive: true })
   repository = await SqliteInventoryRepository.open(join(databaseDirectory, 'inventario.sqlite'))
-  registerInventoryHandlers(ipcMain, repository)
+  registerInventoryHandlers(ipcMain, repository, safeStorage)
   registerUpdateHandlers()
   createWindow()
   app.on('activate', () => {

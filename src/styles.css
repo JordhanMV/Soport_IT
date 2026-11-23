@@ -111,5 +111,10 @@ button, input, select, textarea { font: inherit; }
 .form-field input:focus,.form-field select:focus,.form-field textarea:focus { border-color:#185abd; box-shadow:0 0 0 2px #185abd24; }
 .form-field input::placeholder,.form-field textarea::placeholder { color:#98a2b3; }
 .modal-error { margin:12px 0 0; color:var(--danger); font-size:12px; }
+.password-value { display:inline-block; min-width:105px; font-family:Consolas, monospace; color:#344054; }
+.copy-link { padding:0; color:#344054; background:none; border:0; cursor:pointer; text-align:left; }
+.copy-link:hover { color:var(--primary); text-decoration:underline; }
+.copy-link--action { margin-left:8px; color:var(--primary); font-size:11px; }
+.password-input-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
 @media (max-width:1050px) { .main-content { padding:25px 22px; } .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .sidebar { width:190px; flex-basis:190px; } .main-content { width:calc(100% - 190px); } }
 @media (max-width:800px) { body { min-width:0; } .sidebar { width:65px; flex-basis:65px; padding:20px 8px; } .sidebar .nav-caption,.sidebar .nav-link span,.sidebar-note { display:none; } .nav-link { justify-content:center; padding:0; } .main-content { width:calc(100% - 65px); padding:22px 14px; } .page-heading { align-items:flex-start; } }

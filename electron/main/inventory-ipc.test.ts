@@ -33,6 +33,7 @@ describe('Inventory IPC handlers against the local SQLite repository', () => {
       'components:delete', 'components:list', 'components:save',
       'dashboard:summary',
       'equipment:delete', 'equipment:list', 'equipment:save',
+      'passwords:delete', 'passwords:list', 'passwords:save',
       'people:delete', 'people:list', 'people:save',
     ])
     expect(await invoke('dashboard:summary')).toMatchObject({

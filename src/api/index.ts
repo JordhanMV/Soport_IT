@@ -1,4 +1,4 @@
-import type { ComponentInput, EquipmentInput, PersonInput } from '../shared/types'
+import type { ComponentInput, EquipmentInput, PasswordInput, PersonInput } from '../shared/types'
 
 // Renderer seam: replace this adapter to target a future shared service without changing views.
 export const inventoryApi = {
@@ -15,4 +15,7 @@ export const inventoryApi = {
   areas: () => window.inventory.areas(),
   saveArea: (name: string, id?: number) => window.inventory.saveArea(name, id),
   deleteArea: (id: number) => window.inventory.deleteArea(id),
+  passwords: (search?: string) => window.inventory.passwords(search),
+  savePassword: (input: PasswordInput, id?: number) => window.inventory.savePassword(input, id),
+  deletePassword: (id: number) => window.inventory.deletePassword(id),
 }

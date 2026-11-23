@@ -59,6 +59,17 @@ export interface InventoryComponent {
   createdAt: string
 }
 
+export interface PasswordEntry {
+  id: number
+  title: string
+  username: string
+  password: string
+  url: string
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DashboardSummary {
   peopleCount: number
   equipmentCount: number
@@ -70,3 +81,4 @@ export interface DashboardSummary {
 export type PersonInput = Pick<Person, 'name' | 'email' | 'phone' | 'areaId' | 'status'>
 export type EquipmentInput = Pick<Equipment, 'assetTag' | 'personId' | 'deviceType' | 'laptopBrand' | 'processor' | 'memoryGb' | 'graphicsCard' | 'diskCapacityGb' | 'diskType' | 'operatingSystem' | 'maintenanceDone' | 'lastMaintenanceDate' | 'status' | 'notes'>
 export type ComponentInput = Pick<InventoryComponent, 'name' | 'category' | 'brand' | 'model' | 'serialNumber' | 'equipmentId'>
+export type PasswordInput = Pick<PasswordEntry, 'title' | 'username' | 'password' | 'url' | 'notes'>

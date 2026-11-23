@@ -27,7 +27,7 @@ describe('SQLite local repository', () => {
     let database = new SQL.Database(readFileSync(path))
     expect(database.exec('SELECT id FROM schema_migrations')).toEqual([{
       columns: ['id'],
-      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance']],
+      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance'], ['004-password-manager']],
     }])
     expect(database.exec(`
       SELECT
@@ -43,7 +43,7 @@ describe('SQLite local repository', () => {
     database = new SQL.Database(readFileSync(path))
     expect(database.exec('SELECT id FROM schema_migrations')).toEqual([{
       columns: ['id'],
-      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance']],
+      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance'], ['004-password-manager']],
     }])
     database.close()
   })
