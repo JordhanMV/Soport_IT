@@ -5,3 +5,5 @@ Las migraciones ordenadas se declaran como módulos TypeScript `NNN-descripcion.
 `001-initial-schema.ts` define únicamente tablas, restricciones e índices. No agregar datos semilla, fixtures ni filas de demostración. La base queda vacía después de migrar una instalación nueva. La persistencia solo se accede desde el proceso principal de Electron mediante IPC.
 
 `002-equipment-specifications.ts` agrega a los equipos el tipo de computadora, marca de laptop, tarjeta gráfica y capacidad/tipo de disco; los equipos existentes se conservan como computadoras de escritorio.
+
+`003-equipment-maintenance.ts` agrega el sistema operativo Windows, el indicador de mantenimiento realizado y su fecha; los equipos ya registrados se conservan con esos datos sin especificar y mantenimiento pendiente.

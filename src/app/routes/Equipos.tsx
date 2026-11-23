@@ -10,6 +10,7 @@ import { Status } from './Panel'
 const blank: EquipmentInput = {
   assetTag: '', personId: null, deviceType: 'Escritorio', laptopBrand: '', processor: '',
   memoryGb: null, graphicsCard: '', diskCapacityGb: null, diskType: null, status: 'Operativo', notes: '',
+  operatingSystem: null, maintenanceDone: false, lastMaintenanceDate: null,
 }
 
 export function Equipos() {
@@ -39,6 +40,8 @@ export function Equipos() {
       laptopBrand: equipment.laptopBrand, processor: equipment.processor, memoryGb: equipment.memoryGb,
       graphicsCard: equipment.graphicsCard, diskCapacityGb: equipment.diskCapacityGb,
       diskType: equipment.diskType, status: equipment.status, notes: equipment.notes,
+      operatingSystem: equipment.operatingSystem, maintenanceDone: equipment.maintenanceDone,
+      lastMaintenanceDate: equipment.lastMaintenanceDate,
     } : blank)
     setError('')
     setOpen(true)
@@ -70,15 +73,17 @@ export function Equipos() {
       {loading ? <div className="loading"><Spinner label="Cargando equipos…" /></div> : rows.length === 0 ? (
         <EmptyState title={query ? 'Sin coincidencias' : 'Aún no hay equipos'} detail={query ? 'Prueba con otro identificador o persona.' : 'Registra una computadora para iniciar el inventario.'} />
       ) : <div className="table-wrap"><table className="data-table">
-        <thead><tr><th>Equipo</th><th>Tipo</th><th>Persona asignada</th><th>Procesador</th><th>Memoria</th><th>Tarjeta gráfica</th><th>Almacenamiento</th><th>Componentes</th><th>Estado</th><th><span className="sr-only">Acciones</span></th></tr></thead>
+        <thead><tr><th>Equipo</th><th>Tipo</th><th>Sistema operativo</th><th>Persona asignada</th><th>Procesador</th><th>Memoria</th><th>Tarjeta gráfica</th><th>Almacenamiento</th><th>Mantenimiento</th><th>Componentes</th><th>Estado</th><th><span className="sr-only">Acciones</span></th></tr></thead>
         <tbody>{rows.map((item) => <tr key={item.id}>
           <td><strong className="table-primary">{item.assetTag}</strong><span className="table-secondary">{item.areaName || 'Sin área'}</span></td>
           <td>{item.deviceType}{item.deviceType === 'Laptop' && item.laptopBrand ? <span className="table-secondary">{item.laptopBrand}</span> : null}</td>
+          <td>{item.operatingSystem || '—'}</td>
           <td>{item.personName || <span className="muted">Sin asignar</span>}</td>
           <td>{item.processor || '—'}</td>
           <td>{item.memoryGb ? `${item.memoryGb} GB` : '—'}</td>
           <td>{item.graphicsCard || '—'}</td>
           <td>{item.diskCapacityGb !== null ? `${item.diskCapacityGb} GB${item.diskType ? ` ${item.diskType}` : ''}` : item.diskType || '—'}</td>
+          <td>{item.maintenanceDone ? <><span className="status success">Realizado</span>{item.lastMaintenanceDate && <span className="table-secondary">{formatDate(item.lastMaintenanceDate)}</span>}</> : <span className="status neutral">Pendiente</span>}</td>
           <td>{item.componentCount}</td>
           <td><Status status={item.status} /></td>
           <td><div className="table-actions"><Button className="icon-button" size="small" appearance="subtle" icon={<Edit20Regular />} aria-label={`Editar ${item.assetTag}`} onClick={() => start(item)} /><Button className="icon-button" size="small" appearance="subtle" icon={<Delete20Regular />} aria-label={`Eliminar ${item.assetTag}`} onClick={() => void remove(item)} /></div></td>
@@ -99,6 +104,9 @@ export function Equipos() {
             <label className="form-field">Tarjeta gráfica <input value={form.graphicsCard} onChange={(e) => setForm({ ...form, graphicsCard: e.target.value })} placeholder="Marca y modelo" /></label>
             <label className="form-field">Capacidad del disco (GB) <input type="number" min="0" step="1" value={form.diskCapacityGb ?? ''} onChange={(e) => setForm({ ...form, diskCapacityGb: e.target.value ? Number(e.target.value) : null })} placeholder="Ej. 512" /></label>
             <label className="form-field">Tipo de disco <select value={form.diskType ?? ''} onChange={(e) => setForm({ ...form, diskType: e.target.value ? e.target.value as NonNullable<EquipmentInput['diskType']> : null })}><option value="">Sin especificar</option><option value="SSD">SSD</option><option value="HDD">HDD</option></select></label>
+            <label className="form-field">Sistema operativo <select value={form.operatingSystem ?? ''} onChange={(e) => setForm({ ...form, operatingSystem: e.target.value ? e.target.value as NonNullable<EquipmentInput['operatingSystem']> : null })}><option value="">Sin especificar</option><option value="Windows 10">Windows 10</option><option value="Windows 11">Windows 11</option></select></label>
+            <label className="form-field">Mantenimiento realizado <select value={form.maintenanceDone ? 'si' : 'no'} onChange={(e) => setForm({ ...form, maintenanceDone: e.target.value === 'si', lastMaintenanceDate: e.target.value === 'si' ? form.lastMaintenanceDate : null })}><option value="no">No / pendiente</option><option value="si">Sí</option></select></label>
+            {form.maintenanceDone && <label className="form-field">Fecha del último mantenimiento <input type="date" value={form.lastMaintenanceDate ?? ''} onChange={(e) => setForm({ ...form, lastMaintenanceDate: e.target.value || null })} /></label>}
             <label className="form-field">Estado <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as EquipmentInput['status'] })}><option>Operativo</option><option>Mantenimiento</option><option>Baja</option></select></label>
             <label className="form-field span-2">Notas <textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Detalles adicionales del equipo" /></label>
           </div>
@@ -111,3 +119,8 @@ export function Equipos() {
 }
 
 function messageOf(error: unknown) { return error instanceof Error ? error.message : 'Ocurrió un error al consultar equipos.' }
+
+function formatDate(value: string): string {
+  const date = new Date(`${value}T00:00:00`)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-MX')
+}

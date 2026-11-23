@@ -63,7 +63,9 @@ const equipmentSelect = `
   SELECT e.id, e.asset_tag AS assetTag, e.person_id AS personId, p.name AS personName,
     a.name AS areaName, e.device_type AS deviceType, e.laptop_brand AS laptopBrand,
     e.processor, e.memory_gb AS memoryGb, e.graphics_card AS graphicsCard,
-    e.disk_capacity_gb AS diskCapacityGb, e.disk_type AS diskType, e.status, e.notes,
+    e.disk_capacity_gb AS diskCapacityGb, e.disk_type AS diskType,
+    e.operating_system AS operatingSystem, e.maintenance_done AS maintenanceDone,
+    e.last_maintenance_date AS lastMaintenanceDate, e.status, e.notes,
     (SELECT COUNT(*) FROM components c WHERE c.equipment_id = e.id) AS componentCount,
     e.created_at AS createdAt
   FROM equipment e
@@ -133,10 +135,11 @@ export class SqliteInventoryRepository {
 
   listEquipment(search = ''): Equipment[] {
     const term = `%${search.trim()}%`
-    return this.db.prepare(`${equipmentSelect}
-      WHERE e.asset_tag LIKE ? OR p.name LIKE ? OR e.processor LIKE ?
+    const rows = this.db.prepare(`${equipmentSelect}
+      WHERE e.asset_tag LIKE ? OR p.name LIKE ? OR e.processor LIKE ? OR e.operating_system LIKE ?
       ORDER BY e.created_at DESC, e.asset_tag COLLATE NOCASE
-    `).all(term, term, term) as Equipment[]
+    `).all(term, term, term, term) as (Omit<Equipment, 'maintenanceDone'> & { maintenanceDone: number })[]
+    return rows.map((row) => ({ ...row, maintenanceDone: Boolean(row.maintenanceDone) }))
   }
 
   saveEquipment(input: EquipmentInput, id?: number): Equipment {
@@ -146,22 +149,29 @@ export class SqliteInventoryRepository {
     if (memoryGb !== null && (!Number.isInteger(memoryGb) || memoryGb < 0)) throw new Error('La memoria debe ser un número entero igual o mayor que cero.')
     const diskCapacityGb = input.diskCapacityGb === null ? null : Number(input.diskCapacityGb)
     if (diskCapacityGb !== null && (!Number.isInteger(diskCapacityGb) || diskCapacityGb < 0)) throw new Error('La capacidad del disco debe ser un número entero igual o mayor que cero.')
+    if (input.operatingSystem && !['Windows 10', 'Windows 11'].includes(input.operatingSystem)) throw new Error('El sistema operativo seleccionado no es válido.')
+    const lastMaintenanceDate = input.maintenanceDone ? clean(input.lastMaintenanceDate) || null : null
+    if (lastMaintenanceDate && !/^\d{4}-\d{2}-\d{2}$/.test(lastMaintenanceDate)) throw new Error('La fecha del último mantenimiento no es válida.')
     if (input.personId && !this.db.prepare("SELECT id FROM people WHERE id = ? AND status = 'Activo'").get(input.personId)) {
       throw new Error('La persona seleccionada no existe o está inactiva.')
     }
     if (id) {
       const result = this.db.prepare(`UPDATE equipment SET asset_tag = ?, person_id = ?, device_type = ?, laptop_brand = ?,
-        processor = ?, memory_gb = ?, graphics_card = ?, disk_capacity_gb = ?, disk_type = ?, status = ?, notes = ? WHERE id = ?`)
+        processor = ?, memory_gb = ?, graphics_card = ?, disk_capacity_gb = ?, disk_type = ?,
+        operating_system = ?, maintenance_done = ?, last_maintenance_date = ?, status = ?, notes = ? WHERE id = ?`)
         .run(assetTag, input.personId || null, input.deviceType, laptopBrand, clean(input.processor), memoryGb,
-          clean(input.graphicsCard), diskCapacityGb, input.diskType || null, input.status, clean(input.notes), id)
+          clean(input.graphicsCard), diskCapacityGb, input.diskType || null, input.operatingSystem || null,
+          input.maintenanceDone ? 1 : 0, lastMaintenanceDate, input.status, clean(input.notes), id)
       if (!result.changes) throw new Error('No se encontró el equipo.')
       return this.listEquipment('').find((equipment) => equipment.id === id)!
     }
     const result = this.db.prepare(`INSERT INTO equipment
-      (asset_tag, person_id, device_type, laptop_brand, processor, memory_gb, graphics_card, disk_capacity_gb, disk_type, status, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      (asset_tag, person_id, device_type, laptop_brand, processor, memory_gb, graphics_card, disk_capacity_gb, disk_type,
+       operating_system, maintenance_done, last_maintenance_date, status, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(assetTag, input.personId || null, input.deviceType, laptopBrand, clean(input.processor), memoryGb,
-        clean(input.graphicsCard), diskCapacityGb, input.diskType || null, input.status, clean(input.notes))
+        clean(input.graphicsCard), diskCapacityGb, input.diskType || null, input.operatingSystem || null,
+        input.maintenanceDone ? 1 : 0, lastMaintenanceDate, input.status, clean(input.notes))
     return this.listEquipment('').find((equipment) => equipment.id === Number(result.lastInsertRowid))!
   }
 

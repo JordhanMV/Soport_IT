@@ -56,11 +56,13 @@ describe('Inventory IPC handlers against the local SQLite repository', () => {
       assetTag: 'OPS-001', personId: person.id, deviceType: 'Escritorio', laptopBrand: '',
       processor: 'CPU inicial', memoryGb: 8, graphicsCard: '', diskCapacityGb: null, diskType: null,
       status: 'Operativo', notes: '',
+      operatingSystem: 'Windows 10', maintenanceDone: false, lastMaintenanceDate: null,
     }) as { id: number }
     await invoke('equipment:save', {
       assetTag: 'OPS-001', personId: person.id, deviceType: 'Escritorio', laptopBrand: '',
       processor: 'CPU actualizado', memoryGb: 16, graphicsCard: '', diskCapacityGb: null, diskType: null,
       status: 'Operativo', notes: '',
+      operatingSystem: 'Windows 11', maintenanceDone: true, lastMaintenanceDate: '2026-11-20',
     }, equipment.id)
     expect(await invoke('equipment:list', 'CPU actualizado')).toMatchObject([
       { id: equipment.id, personName: 'Lucía Torres', memoryGb: 16 },

@@ -38,6 +38,9 @@ export interface Equipment {
   graphicsCard: string
   diskCapacityGb: number | null
   diskType: 'SSD' | 'HDD' | null
+  operatingSystem: 'Windows 10' | 'Windows 11' | null
+  maintenanceDone: boolean
+  lastMaintenanceDate: string | null
   status: EquipmentStatus
   notes: string
   componentCount: number
@@ -65,5 +68,5 @@ export interface DashboardSummary {
 }
 
 export type PersonInput = Pick<Person, 'name' | 'email' | 'phone' | 'areaId' | 'status'>
-export type EquipmentInput = Pick<Equipment, 'assetTag' | 'personId' | 'deviceType' | 'laptopBrand' | 'processor' | 'memoryGb' | 'graphicsCard' | 'diskCapacityGb' | 'diskType' | 'status' | 'notes'>
+export type EquipmentInput = Pick<Equipment, 'assetTag' | 'personId' | 'deviceType' | 'laptopBrand' | 'processor' | 'memoryGb' | 'graphicsCard' | 'diskCapacityGb' | 'diskType' | 'operatingSystem' | 'maintenanceDone' | 'lastMaintenanceDate' | 'status' | 'notes'>
 export type ComponentInput = Pick<InventoryComponent, 'name' | 'category' | 'brand' | 'model' | 'serialNumber' | 'equipmentId'>

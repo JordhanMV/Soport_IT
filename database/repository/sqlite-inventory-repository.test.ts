@@ -27,7 +27,7 @@ describe('SQLite local repository', () => {
     let database = new SQL.Database(readFileSync(path))
     expect(database.exec('SELECT id FROM schema_migrations')).toEqual([{
       columns: ['id'],
-      values: [['001-initial-schema'], ['002-equipment-specifications']],
+      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance']],
     }])
     expect(database.exec(`
       SELECT
@@ -43,7 +43,7 @@ describe('SQLite local repository', () => {
     database = new SQL.Database(readFileSync(path))
     expect(database.exec('SELECT id FROM schema_migrations')).toEqual([{
       columns: ['id'],
-      values: [['001-initial-schema'], ['002-equipment-specifications']],
+      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance']],
     }])
     database.close()
   })
@@ -61,6 +61,7 @@ describe('SQLite local repository', () => {
       assetTag: 'FIN-042', personId: person.id, deviceType: 'Laptop', laptopBrand: 'Lenovo',
       processor: 'Intel Core i5', memoryGb: 16, graphicsCard: 'Intel Iris Xe',
       diskCapacityGb: 512, diskType: 'SSD', status: 'Operativo', notes: '',
+      operatingSystem: 'Windows 11', maintenanceDone: true, lastMaintenanceDate: '2026-11-20',
     })
     repository.saveComponent({ name: 'Memoria', category: 'RAM', brand: 'Kingston', model: '16 GB', serialNumber: 'SN-1', equipmentId: device.id })
 
@@ -73,6 +74,7 @@ describe('SQLite local repository', () => {
     expect(repository.listEquipment()[0]).toMatchObject({
       assetTag: 'FIN-042', personName: 'Mariana López', componentCount: 1,
       deviceType: 'Laptop', laptopBrand: 'Lenovo', graphicsCard: 'Intel Iris Xe', diskCapacityGb: 512, diskType: 'SSD',
+      operatingSystem: 'Windows 11', maintenanceDone: true, lastMaintenanceDate: '2026-11-20',
     })
     repository.close()
   })
@@ -85,6 +87,7 @@ describe('SQLite local repository', () => {
     const equipmentInput = {
       personId: person.id, deviceType: 'Escritorio' as const, laptopBrand: '', processor: '', memoryGb: null,
       graphicsCard: '', diskCapacityGb: null, diskType: null, status: 'Operativo' as const, notes: '',
+      operatingSystem: null, maintenanceDone: false, lastMaintenanceDate: null,
     }
     const device = repository.saveEquipment({ ...equipmentInput, assetTag: 'SIS-011' })
     expect(() => repository.saveEquipment({ ...equipmentInput, assetTag: 'SIS-014', deviceType: 'Laptop', laptopBrand: '' })).toThrow('La marca de la laptop es obligatoria.')
