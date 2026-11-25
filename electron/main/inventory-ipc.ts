@@ -37,4 +37,7 @@ export function registerInventoryHandlers(ipc: IpcHandlerRegistrar, repository: 
   ipc.handle('passwords:list', (_event, search: string) => repository.listPasswords(search, decrypt))
   ipc.handle('passwords:save', (_event, input, id?: number) => repository.savePassword(input, id, encrypt))
   ipc.handle('passwords:delete', (_event, id: number) => repository.deletePassword(id))
+  ipc.handle('pendingNotes:list', (_event, search: string) => repository.listPendingNotes(search))
+  ipc.handle('pendingNotes:save', (_event, input, id?: number) => repository.savePendingNote(input, id))
+  ipc.handle('pendingNotes:delete', (_event, id: number) => repository.deletePendingNote(id))
 }

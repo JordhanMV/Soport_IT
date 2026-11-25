@@ -6,6 +6,7 @@ import { Equipos } from './routes/Equipos'
 import { Componentes } from './routes/Componentes'
 import { Areas } from './routes/Areas'
 import { Passwords } from './routes/Passwords'
+import { Notas } from './routes/Notas'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/componentes" element={<Componentes />} />
         <Route path="/areas" element={<Areas />} />
         <Route path="/contrasenas" element={<Passwords />} />
+        <Route path="/notas" element={<Notas />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>

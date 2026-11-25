@@ -70,6 +70,15 @@ export interface PasswordEntry {
   updatedAt: string
 }
 
+export interface PendingNote {
+  id: number
+  title: string
+  content: string
+  completed: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DashboardSummary {
   peopleCount: number
   equipmentCount: number
@@ -82,3 +91,4 @@ export type PersonInput = Pick<Person, 'name' | 'email' | 'phone' | 'areaId' | '
 export type EquipmentInput = Pick<Equipment, 'assetTag' | 'personId' | 'deviceType' | 'laptopBrand' | 'processor' | 'memoryGb' | 'graphicsCard' | 'diskCapacityGb' | 'diskType' | 'operatingSystem' | 'maintenanceDone' | 'lastMaintenanceDate' | 'status' | 'notes'>
 export type ComponentInput = Pick<InventoryComponent, 'name' | 'category' | 'brand' | 'model' | 'serialNumber' | 'equipmentId'>
 export type PasswordInput = Pick<PasswordEntry, 'title' | 'username' | 'password' | 'url' | 'notes'>
+export type PendingNoteInput = Pick<PendingNote, 'title' | 'content' | 'completed'>

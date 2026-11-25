@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, UpdateStatus } from '../../src/shared/types'
+import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, PendingNote, PendingNoteInput, UpdateStatus } from '../../src/shared/types'
 
 const inventoryApi = {
   dashboard: () => ipcRenderer.invoke('dashboard:summary') as Promise<DashboardSummary>,
@@ -18,6 +18,9 @@ const inventoryApi = {
   passwords: (search = '') => ipcRenderer.invoke('passwords:list', search) as Promise<PasswordEntry[]>,
   savePassword: (input: PasswordInput, id?: number) => ipcRenderer.invoke('passwords:save', input, id) as Promise<PasswordEntry>,
   deletePassword: (id: number) => ipcRenderer.invoke('passwords:delete', id) as Promise<void>,
+  pendingNotes: (search = '') => ipcRenderer.invoke('pendingNotes:list', search) as Promise<PendingNote[]>,
+  savePendingNote: (input: PendingNoteInput, id?: number) => ipcRenderer.invoke('pendingNotes:save', input, id) as Promise<PendingNote>,
+  deletePendingNote: (id: number) => ipcRenderer.invoke('pendingNotes:delete', id) as Promise<void>,
   updateStatus: () => ipcRenderer.invoke('updates:status') as Promise<UpdateStatus>,
   checkForUpdates: () => ipcRenderer.invoke('updates:check') as Promise<void>,
   downloadUpdate: () => ipcRenderer.invoke('updates:download') as Promise<void>,

@@ -2,7 +2,7 @@ import initSqlJs, { Database as SqlDatabase, SqlValue } from 'sql.js'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { runMigrations } from '../migrations/runner'
-import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area } from '../../src/shared/types'
+import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, PendingNote, PendingNoteInput } from '../../src/shared/types'
 
 interface Db {
   pragma(value: string): void
@@ -282,6 +282,40 @@ export class SqliteInventoryRepository {
   deletePassword(id: number): void {
     const result = this.db.prepare('DELETE FROM passwords WHERE id = ?').run(id)
     if (!result.changes) throw new Error('No se encontró la contraseña.')
+  }
+
+  listPendingNotes(search = ''): PendingNote[] {
+    const term = `%${search.trim()}%`
+    const rows = this.db.prepare(`
+      SELECT id, title, content, completed, created_at AS createdAt, updated_at AS updatedAt
+      FROM pending_notes
+      WHERE title LIKE ? OR content LIKE ?
+      ORDER BY completed ASC, updated_at DESC, created_at DESC
+    `).all(term, term) as (Omit<PendingNote, 'completed'> & { completed: number })[]
+    return rows.map((row) => ({ ...row, completed: Boolean(row.completed) }))
+  }
+
+  savePendingNote(input: PendingNoteInput, id?: number): PendingNote {
+    const title = required(input.title, 'El título de la nota es obligatorio.')
+    if (id) {
+      const result = this.db.prepare(`
+        UPDATE pending_notes SET title = ?, content = ?, completed = ?, updated_at = datetime('now')
+        WHERE id = ?
+      `).run(title, clean(input.content), input.completed ? 1 : 0, id)
+      if (!result.changes) throw new Error('No se encontró la nota.')
+    } else {
+      this.db.prepare('INSERT INTO pending_notes (title, content, completed) VALUES (?, ?, ?)')
+        .run(title, clean(input.content), input.completed ? 1 : 0)
+    }
+    const noteId = id ?? Number(this.db.prepare<{ id: number }>('SELECT last_insert_rowid() AS id').get()?.id)
+    const note = this.listPendingNotes().find((item) => item.id === noteId)
+    if (!note) throw new Error('No se pudo recuperar la nota guardada.')
+    return note
+  }
+
+  deletePendingNote(id: number): void {
+    const result = this.db.prepare('DELETE FROM pending_notes WHERE id = ?').run(id)
+    if (!result.changes) throw new Error('No se encontró la nota.')
   }
 }
 

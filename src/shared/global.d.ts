@@ -1,4 +1,4 @@
-import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, UpdateStatus } from './types'
+import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, PendingNote, PendingNoteInput, UpdateStatus } from './types'
 
 declare global {
   interface Window {
@@ -19,6 +19,9 @@ declare global {
       passwords(search?: string): Promise<PasswordEntry[]>
       savePassword(input: PasswordInput, id?: number): Promise<PasswordEntry>
       deletePassword(id: number): Promise<void>
+      pendingNotes(search?: string): Promise<PendingNote[]>
+      savePendingNote(input: PendingNoteInput, id?: number): Promise<PendingNote>
+      deletePendingNote(id: number): Promise<void>
       updateStatus(): Promise<UpdateStatus>
       checkForUpdates(): Promise<void>
       downloadUpdate(): Promise<void>
