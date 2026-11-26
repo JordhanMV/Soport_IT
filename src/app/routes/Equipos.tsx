@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { Button, Input, Spinner } from '@fluentui/react-components'
-import { Add20Regular, Search20Regular, Edit20Regular, Delete20Regular } from '@fluentui/react-icons'
+import { Add20Regular, Search20Regular, Edit20Regular, Delete20Regular, ArrowDownload20Regular } from '@fluentui/react-icons'
 import { inventoryApi } from '../../api'
 import type { Equipment, EquipmentInput, Person } from '../../shared/types'
 import { PageHeader } from '../../components/PageHeader'
@@ -23,6 +23,7 @@ export function Equipos() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -58,9 +59,18 @@ export function Equipos() {
     try { await inventoryApi.deleteEquipment(item.id); await refresh() }
     catch (reason) { setError(messageOf(reason)) }
   }
+  async function exportPdf() {
+    setExporting(true)
+    try {
+      const result = await inventoryApi.exportInventoryPdf()
+      if (result.saved) setError('')
+    } catch (reason) { setError(messageOf(reason)) }
+    finally { setExporting(false) }
+  }
 
   return <>
     <PageHeader title="Equipos" description="Administra computadoras, asignaciones y especificaciones.">
+      <Button appearance="secondary" icon={<ArrowDownload20Regular />} disabled={exporting} onClick={() => void exportPdf()}>{exporting ? 'Generando PDF…' : 'Descargar PDF'}</Button>
       <Button appearance="primary" icon={<Add20Regular />} onClick={() => start()}>Nuevo equipo</Button>
     </PageHeader>
     <Feedback error={error && !open ? error : ''} />

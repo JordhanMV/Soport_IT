@@ -22,6 +22,7 @@ declare global {
       pendingNotes(search?: string): Promise<PendingNote[]>
       savePendingNote(input: PendingNoteInput, id?: number): Promise<PendingNote>
       deletePendingNote(id: number): Promise<void>
+      exportInventoryPdf(): Promise<{ saved: boolean }>
       updateStatus(): Promise<UpdateStatus>
       checkForUpdates(): Promise<void>
       downloadUpdate(): Promise<void>

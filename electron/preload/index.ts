@@ -21,6 +21,7 @@ const inventoryApi = {
   pendingNotes: (search = '') => ipcRenderer.invoke('pendingNotes:list', search) as Promise<PendingNote[]>,
   savePendingNote: (input: PendingNoteInput, id?: number) => ipcRenderer.invoke('pendingNotes:save', input, id) as Promise<PendingNote>,
   deletePendingNote: (id: number) => ipcRenderer.invoke('pendingNotes:delete', id) as Promise<void>,
+  exportInventoryPdf: () => ipcRenderer.invoke('inventory:export-pdf') as Promise<{ saved: boolean }>,
   updateStatus: () => ipcRenderer.invoke('updates:status') as Promise<UpdateStatus>,
   checkForUpdates: () => ipcRenderer.invoke('updates:check') as Promise<void>,
   downloadUpdate: () => ipcRenderer.invoke('updates:download') as Promise<void>,

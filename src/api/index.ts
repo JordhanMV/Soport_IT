@@ -21,4 +21,5 @@ export const inventoryApi = {
   pendingNotes: (search?: string) => window.inventory.pendingNotes(search),
   savePendingNote: (input: PendingNoteInput, id?: number) => window.inventory.savePendingNote(input, id),
   deletePendingNote: (id: number) => window.inventory.deletePendingNote(id),
+  exportInventoryPdf: () => window.inventory.exportInventoryPdf(),
 }
