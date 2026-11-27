@@ -31,7 +31,7 @@ export interface Equipment {
   personId: number | null
   personName: string | null
   areaName: string | null
-  deviceType: 'Laptop' | 'Escritorio'
+  deviceType: 'Laptop' | 'Escritorio' | 'Impresora' | 'Monitor'
   laptopBrand: string
   processor: string
   memoryGb: number | null

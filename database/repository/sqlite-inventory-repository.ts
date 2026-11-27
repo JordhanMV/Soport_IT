@@ -137,14 +137,17 @@ export class SqliteInventoryRepository {
     const term = `%${search.trim()}%`
     const rows = this.db.prepare(`${equipmentSelect}
       WHERE e.asset_tag LIKE ? OR p.name LIKE ? OR e.processor LIKE ? OR e.operating_system LIKE ?
+        OR e.device_type LIKE ? OR e.laptop_brand LIKE ?
       ORDER BY e.created_at DESC, e.asset_tag COLLATE NOCASE
-    `).all(term, term, term, term) as (Omit<Equipment, 'maintenanceDone'> & { maintenanceDone: number })[]
+    `).all(term, term, term, term, term, term) as (Omit<Equipment, 'maintenanceDone'> & { maintenanceDone: number })[]
     return rows.map((row) => ({ ...row, maintenanceDone: Boolean(row.maintenanceDone) }))
   }
 
   saveEquipment(input: EquipmentInput, id?: number): Equipment {
     const assetTag = required(input.assetTag, 'El identificador del equipo es obligatorio.')
-    const laptopBrand = input.deviceType === 'Laptop' ? required(input.laptopBrand, 'La marca de la laptop es obligatoria.') : ''
+    if (!['Laptop', 'Escritorio', 'Impresora', 'Monitor'].includes(input.deviceType)) throw new Error('El tipo de equipo seleccionado no es válido.')
+    const laptopBrand = input.deviceType === 'Laptop' ? required(input.laptopBrand, 'La marca de la laptop es obligatoria.') : clean(input.laptopBrand)
+    const isComputer = input.deviceType === 'Laptop' || input.deviceType === 'Escritorio'
     const memoryGb = input.memoryGb === null ? null : Number(input.memoryGb)
     if (memoryGb !== null && (!Number.isInteger(memoryGb) || memoryGb < 0)) throw new Error('La memoria debe ser un número entero igual o mayor que cero.')
     const diskCapacityGb = input.diskCapacityGb === null ? null : Number(input.diskCapacityGb)
@@ -155,12 +158,18 @@ export class SqliteInventoryRepository {
     if (input.personId && !this.db.prepare("SELECT id FROM people WHERE id = ? AND status = 'Activo'").get(input.personId)) {
       throw new Error('La persona seleccionada no existe o está inactiva.')
     }
+    const processor = isComputer ? clean(input.processor) : ''
+    const finalMemoryGb = isComputer ? memoryGb : null
+    const graphicsCard = isComputer ? clean(input.graphicsCard) : ''
+    const finalDiskCapacityGb = isComputer ? diskCapacityGb : null
+    const diskType = isComputer ? input.diskType || null : null
+    const operatingSystem = isComputer ? input.operatingSystem || null : null
     if (id) {
       const result = this.db.prepare(`UPDATE equipment SET asset_tag = ?, person_id = ?, device_type = ?, laptop_brand = ?,
         processor = ?, memory_gb = ?, graphics_card = ?, disk_capacity_gb = ?, disk_type = ?,
         operating_system = ?, maintenance_done = ?, last_maintenance_date = ?, status = ?, notes = ? WHERE id = ?`)
-        .run(assetTag, input.personId || null, input.deviceType, laptopBrand, clean(input.processor), memoryGb,
-          clean(input.graphicsCard), diskCapacityGb, input.diskType || null, input.operatingSystem || null,
+        .run(assetTag, input.personId || null, input.deviceType, laptopBrand, processor, finalMemoryGb,
+          graphicsCard, finalDiskCapacityGb, diskType, operatingSystem,
           input.maintenanceDone ? 1 : 0, lastMaintenanceDate, input.status, clean(input.notes), id)
       if (!result.changes) throw new Error('No se encontró el equipo.')
       return this.listEquipment('').find((equipment) => equipment.id === id)!
@@ -169,8 +178,8 @@ export class SqliteInventoryRepository {
       (asset_tag, person_id, device_type, laptop_brand, processor, memory_gb, graphics_card, disk_capacity_gb, disk_type,
        operating_system, maintenance_done, last_maintenance_date, status, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(assetTag, input.personId || null, input.deviceType, laptopBrand, clean(input.processor), memoryGb,
-        clean(input.graphicsCard), diskCapacityGb, input.diskType || null, input.operatingSystem || null,
+      .run(assetTag, input.personId || null, input.deviceType, laptopBrand, processor, finalMemoryGb,
+        graphicsCard, finalDiskCapacityGb, diskType, operatingSystem,
         input.maintenanceDone ? 1 : 0, lastMaintenanceDate, input.status, clean(input.notes))
     return this.listEquipment('').find((equipment) => equipment.id === Number(result.lastInsertRowid))!
   }

@@ -26,7 +26,7 @@ export function Panel() {
         <>
           <section className="kpi-grid" aria-label="Resumen del inventario">
             <Kpi label="Personas activas" value={summary.peopleCount} detail="Personas en el directorio" icon={<People20Regular />} />
-            <Kpi label="Equipos registrados" value={summary.equipmentCount} detail="Computadoras inventariadas" icon={<Desktop20Regular />} />
+            <Kpi label="Equipos registrados" value={summary.equipmentCount} detail="Equipos y periféricos" icon={<Desktop20Regular />} />
             <Kpi label="Componentes" value={summary.componentCount} detail="Componentes registrados" icon={<Memory16Regular />} />
             <Kpi label="Sin asignar" value={summary.unassignedEquipment} detail="Equipos disponibles" icon={<span className="unassigned-icon">↗</span>} warn={summary.unassignedEquipment > 0} />
           </section>

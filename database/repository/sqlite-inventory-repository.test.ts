@@ -27,7 +27,7 @@ describe('SQLite local repository', () => {
     let database = new SQL.Database(readFileSync(path))
     expect(database.exec('SELECT id FROM schema_migrations')).toEqual([{
       columns: ['id'],
-      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance'], ['004-password-manager'], ['005-pending-notes']],
+      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance'], ['004-password-manager'], ['005-pending-notes'], ['006-equipment-device-types']],
     }])
     expect(database.exec(`
       SELECT
@@ -43,7 +43,7 @@ describe('SQLite local repository', () => {
     database = new SQL.Database(readFileSync(path))
     expect(database.exec('SELECT id FROM schema_migrations')).toEqual([{
       columns: ['id'],
-      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance'], ['004-password-manager'], ['005-pending-notes']],
+      values: [['001-initial-schema'], ['002-equipment-specifications'], ['003-equipment-maintenance'], ['004-password-manager'], ['005-pending-notes'], ['006-equipment-device-types']],
     }])
     database.close()
   })
@@ -79,7 +79,30 @@ describe('SQLite local repository', () => {
     repository.close()
   })
 
-  it('rejects duplicate equipment identifiers and keeps one active device per person', async () => {
+  it('persists printers and monitors as equipment types', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'inventory-device-types-test-'))
+    temporaryFolders.push(folder)
+    const repository = await SqliteInventoryRepository.open(join(folder, 'inventory.sqlite'))
+
+    const printer = repository.saveEquipment({
+      assetTag: 'IMP-001', personId: null, deviceType: 'Impresora', laptopBrand: 'Epson',
+      processor: '', memoryGb: null, graphicsCard: '', diskCapacityGb: null, diskType: null,
+      operatingSystem: null, maintenanceDone: false, lastMaintenanceDate: null,
+      status: 'Operativo', notes: 'Red',
+    })
+    const monitor = repository.saveEquipment({
+      assetTag: 'MON-001', personId: null, deviceType: 'Monitor', laptopBrand: 'Dell',
+      processor: '', memoryGb: null, graphicsCard: '', diskCapacityGb: null, diskType: null,
+      operatingSystem: null, maintenanceDone: false, lastMaintenanceDate: null,
+      status: 'Operativo', notes: '',
+    })
+
+    expect(printer).toMatchObject({ deviceType: 'Impresora', laptopBrand: 'Epson', processor: '', memoryGb: null })
+    expect(monitor).toMatchObject({ deviceType: 'Monitor', laptopBrand: 'Dell', operatingSystem: null })
+    repository.close()
+  })
+
+  it('rejects duplicate identifiers and allows multiple peripherals for one person', async () => {
     const folder = mkdtempSync(join(tmpdir(), 'inventory-test-'))
     temporaryFolders.push(folder)
     const repository = await SqliteInventoryRepository.open(join(folder, 'inventory.sqlite'))
@@ -91,7 +114,7 @@ describe('SQLite local repository', () => {
     }
     const device = repository.saveEquipment({ ...equipmentInput, assetTag: 'SIS-011' })
     expect(() => repository.saveEquipment({ ...equipmentInput, assetTag: 'SIS-014', deviceType: 'Laptop', laptopBrand: '' })).toThrow('La marca de la laptop es obligatoria.')
-    expect(() => repository.saveEquipment({ ...equipmentInput, assetTag: 'SIS-012' })).toThrow()
+    expect(repository.saveEquipment({ ...equipmentInput, assetTag: 'SIS-012', deviceType: 'Escritorio' }).assetTag).toBe('SIS-012')
     expect(() => repository.saveEquipment({ ...equipmentInput, assetTag: device.assetTag, personId: null })).toThrow()
     expect(() => repository.saveEquipment({ ...equipmentInput, assetTag: 'SIS-013', diskCapacityGb: -1 })).toThrow('La capacidad del disco debe ser un número entero igual o mayor que cero.')
     repository.close()

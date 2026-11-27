@@ -17,7 +17,7 @@ export function generateInventoryReportHtml(people: PersonReportRecord[], equipm
         <h3>${escapeHtml(item.assetTag)} <span>${escapeHtml(item.status)}</span></h3>
         <dl>
           ${detail('Área', item.areaName)}
-          ${detail('Tipo', item.deviceType === 'Laptop' && item.laptopBrand ? `Laptop — ${item.laptopBrand}` : item.deviceType)}
+          ${detail('Tipo', item.laptopBrand ? `${item.deviceType} — ${item.laptopBrand}` : item.deviceType)}
           ${detail('Persona asignada', item.personName)}
           ${detail('Procesador', item.processor)}
           ${detail('Memoria RAM', item.memoryGb === null ? null : `${item.memoryGb} GB`)}

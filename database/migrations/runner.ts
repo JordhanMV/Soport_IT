@@ -3,6 +3,7 @@ import { equipmentSpecificationsMigration } from './002-equipment-specifications
 import { equipmentMaintenanceMigration } from './003-equipment-maintenance'
 import { passwordManagerMigration } from './004-password-manager'
 import { pendingNotesMigration } from './005-pending-notes'
+import { equipmentDeviceTypesMigration } from './006-equipment-device-types'
 
 export interface Migration {
   id: string
@@ -14,7 +15,7 @@ interface MigrationDatabase {
   prepare<T>(sql: string): { all(...params: unknown[]): T[] }
 }
 
-const migrations: Migration[] = [initialSchemaMigration, equipmentSpecificationsMigration, equipmentMaintenanceMigration, passwordManagerMigration, pendingNotesMigration]
+const migrations: Migration[] = [initialSchemaMigration, equipmentSpecificationsMigration, equipmentMaintenanceMigration, passwordManagerMigration, pendingNotesMigration, equipmentDeviceTypesMigration]
 
 export function runMigrations(database: MigrationDatabase): void {
   database.exec(`
@@ -36,11 +37,13 @@ export function runMigrations(database: MigrationDatabase): void {
     previousId = migration.id
 
     if (applied.has(migration.id)) continue
+    if (migration.id === '006-equipment-device-types') database.exec('PRAGMA foreign_keys = OFF')
     database.exec(`
       BEGIN IMMEDIATE;
       ${migration.up}
       INSERT INTO schema_migrations (id) VALUES ('${migration.id}');
       COMMIT;
     `)
+    if (migration.id === '006-equipment-device-types') database.exec('PRAGMA foreign_keys = ON')
   }
 }

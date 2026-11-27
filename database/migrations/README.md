@@ -7,3 +7,5 @@ Las migraciones ordenadas se declaran como módulos TypeScript `NNN-descripcion.
 `002-equipment-specifications.ts` agrega a los equipos el tipo de computadora, marca de laptop, tarjeta gráfica y capacidad/tipo de disco; los equipos existentes se conservan como computadoras de escritorio.
 
 `003-equipment-maintenance.ts` agrega el sistema operativo Windows, el indicador de mantenimiento realizado y su fecha; los equipos ya registrados se conservan con esos datos sin especificar y mantenimiento pendiente.
+
+`006-equipment-device-types.ts` amplía el inventario a impresoras y monitores. Conserva los equipos existentes y permite asignar varios periféricos a una misma persona.

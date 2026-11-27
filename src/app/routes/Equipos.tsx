@@ -69,7 +69,7 @@ export function Equipos() {
   }
 
   return <>
-    <PageHeader title="Equipos" description="Administra computadoras, asignaciones y especificaciones.">
+    <PageHeader title="Equipos" description="Administra computadoras, impresoras, monitores y sus asignaciones.">
       <Button appearance="secondary" icon={<ArrowDownload20Regular />} disabled={exporting} onClick={() => void exportPdf()}>{exporting ? 'Generando PDF…' : 'Descargar PDF'}</Button>
       <Button appearance="primary" icon={<Add20Regular />} onClick={() => start()}>Nuevo equipo</Button>
     </PageHeader>
@@ -86,7 +86,7 @@ export function Equipos() {
         <thead><tr><th>Equipo</th><th>Tipo</th><th>Sistema operativo</th><th>Persona asignada</th><th>Procesador</th><th>Memoria</th><th>Tarjeta gráfica</th><th>Almacenamiento</th><th>Mantenimiento</th><th>Componentes</th><th>Estado</th><th><span className="sr-only">Acciones</span></th></tr></thead>
         <tbody>{rows.map((item) => <tr key={item.id}>
           <td><strong className="table-primary">{item.assetTag}</strong><span className="table-secondary">{item.areaName || 'Sin área'}</span></td>
-          <td>{item.deviceType}{item.deviceType === 'Laptop' && item.laptopBrand ? <span className="table-secondary">{item.laptopBrand}</span> : null}</td>
+          <td>{item.deviceType}{item.laptopBrand ? <span className="table-secondary">{item.laptopBrand}</span> : null}</td>
           <td>{item.operatingSystem || '—'}</td>
           <td>{item.personName || <span className="muted">Sin asignar</span>}</td>
           <td>{item.processor || '—'}</td>
@@ -106,15 +106,17 @@ export function Equipos() {
         <form onSubmit={submit}>
           <div className="form-grid">
             <label className="form-field">Identificador <input required autoFocus value={form.assetTag} onChange={(e) => setForm({ ...form, assetTag: e.target.value })} placeholder="Ej. FIN-043" /></label>
-            <label className="form-field">Persona asignada <select value={form.personId ?? ''} onChange={(e) => setForm({ ...form, personId: e.target.value ? Number(e.target.value) : null })}><option value="">Sin asignar</option>{people.filter((person) => person.status === 'Activo' && (person.equipmentId === null || person.equipmentId === editing?.id)).map((person) => <option key={person.id} value={person.id}>{person.name} — {person.areaName || 'Sin área'}</option>)}</select></label>
-            <label className="form-field">Tipo de equipo <select value={form.deviceType} onChange={(e) => setForm({ ...form, deviceType: e.target.value as EquipmentInput['deviceType'], laptopBrand: e.target.value === 'Laptop' ? form.laptopBrand : '' })}><option value="Escritorio">Computadora de escritorio</option><option value="Laptop">Laptop</option></select></label>
-            {form.deviceType === 'Laptop' && <label className="form-field">Marca de laptop <input required value={form.laptopBrand} onChange={(e) => setForm({ ...form, laptopBrand: e.target.value })} placeholder="Ej. Dell, HP, Lenovo" /></label>}
-            <label className="form-field">Procesador <input value={form.processor} onChange={(e) => setForm({ ...form, processor: e.target.value })} placeholder="Marca y modelo" /></label>
-            <label className="form-field">Memoria RAM (GB) <input type="number" min="0" step="1" value={form.memoryGb ?? ''} onChange={(e) => setForm({ ...form, memoryGb: e.target.value ? Number(e.target.value) : null })} placeholder="Ej. 16" /></label>
-            <label className="form-field">Tarjeta gráfica <input value={form.graphicsCard} onChange={(e) => setForm({ ...form, graphicsCard: e.target.value })} placeholder="Marca y modelo" /></label>
-            <label className="form-field">Capacidad del disco (GB) <input type="number" min="0" step="1" value={form.diskCapacityGb ?? ''} onChange={(e) => setForm({ ...form, diskCapacityGb: e.target.value ? Number(e.target.value) : null })} placeholder="Ej. 512" /></label>
-            <label className="form-field">Tipo de disco <select value={form.diskType ?? ''} onChange={(e) => setForm({ ...form, diskType: e.target.value ? e.target.value as NonNullable<EquipmentInput['diskType']> : null })}><option value="">Sin especificar</option><option value="SSD">SSD</option><option value="HDD">HDD</option></select></label>
-            <label className="form-field">Sistema operativo <select value={form.operatingSystem ?? ''} onChange={(e) => setForm({ ...form, operatingSystem: e.target.value ? e.target.value as NonNullable<EquipmentInput['operatingSystem']> : null })}><option value="">Sin especificar</option><option value="Windows 10">Windows 10</option><option value="Windows 11">Windows 11</option></select></label>
+            <label className="form-field">Persona asignada <select value={form.personId ?? ''} onChange={(e) => setForm({ ...form, personId: e.target.value ? Number(e.target.value) : null })}><option value="">Sin asignar</option>{people.filter((person) => person.status === 'Activo').map((person) => <option key={person.id} value={person.id}>{person.name} — {person.areaName || 'Sin área'}</option>)}</select></label>
+            <label className="form-field">Tipo de equipo <select value={form.deviceType} onChange={(e) => setForm({ ...form, deviceType: e.target.value as EquipmentInput['deviceType'], laptopBrand: e.target.value === 'Laptop' ? form.laptopBrand : '' })}><option value="Escritorio">Computadora de escritorio</option><option value="Laptop">Laptop</option><option value="Impresora">Impresora</option><option value="Monitor">Monitor</option></select></label>
+            {form.deviceType !== 'Escritorio' && <label className="form-field">{form.deviceType === 'Laptop' ? 'Marca de laptop' : 'Marca'} <input required={form.deviceType === 'Laptop'} value={form.laptopBrand} onChange={(e) => setForm({ ...form, laptopBrand: e.target.value })} placeholder={form.deviceType === 'Monitor' ? 'Ej. Samsung, LG, Dell' : 'Ej. HP, Epson, Canon'} /></label>}
+            {(form.deviceType === 'Laptop' || form.deviceType === 'Escritorio') && <>
+              <label className="form-field">Procesador <input value={form.processor} onChange={(e) => setForm({ ...form, processor: e.target.value })} placeholder="Marca y modelo" /></label>
+              <label className="form-field">Memoria RAM (GB) <input type="number" min="0" step="1" value={form.memoryGb ?? ''} onChange={(e) => setForm({ ...form, memoryGb: e.target.value ? Number(e.target.value) : null })} placeholder="Ej. 16" /></label>
+              <label className="form-field">Tarjeta gráfica <input value={form.graphicsCard} onChange={(e) => setForm({ ...form, graphicsCard: e.target.value })} placeholder="Marca y modelo" /></label>
+              <label className="form-field">Capacidad del disco (GB) <input type="number" min="0" step="1" value={form.diskCapacityGb ?? ''} onChange={(e) => setForm({ ...form, diskCapacityGb: e.target.value ? Number(e.target.value) : null })} placeholder="Ej. 512" /></label>
+              <label className="form-field">Tipo de disco <select value={form.diskType ?? ''} onChange={(e) => setForm({ ...form, diskType: e.target.value ? e.target.value as NonNullable<EquipmentInput['diskType']> : null })}><option value="">Sin especificar</option><option value="SSD">SSD</option><option value="HDD">HDD</option></select></label>
+              <label className="form-field">Sistema operativo <select value={form.operatingSystem ?? ''} onChange={(e) => setForm({ ...form, operatingSystem: e.target.value ? e.target.value as NonNullable<EquipmentInput['operatingSystem']> : null })}><option value="">Sin especificar</option><option value="Windows 10">Windows 10</option><option value="Windows 11">Windows 11</option></select></label>
+            </>}
             <label className="form-field">Mantenimiento realizado <select value={form.maintenanceDone ? 'si' : 'no'} onChange={(e) => setForm({ ...form, maintenanceDone: e.target.value === 'si', lastMaintenanceDate: e.target.value === 'si' ? form.lastMaintenanceDate : null })}><option value="no">No / pendiente</option><option value="si">Sí</option></select></label>
             {form.maintenanceDone && <label className="form-field">Fecha del último mantenimiento <input type="date" value={form.lastMaintenanceDate ?? ''} onChange={(e) => setForm({ ...form, lastMaintenanceDate: e.target.value || null })} /></label>}
             <label className="form-field">Estado <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as EquipmentInput['status'] })}><option>Operativo</option><option>Mantenimiento</option><option>Baja</option></select></label>
