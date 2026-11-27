@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, PendingNote, PendingNoteInput, UpdateStatus } from '../../src/shared/types'
+import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, PendingNote, PendingNoteInput, UpdateStatus, SyncStatus } from '../../src/shared/types'
 
 const inventoryApi = {
   dashboard: () => ipcRenderer.invoke('dashboard:summary') as Promise<DashboardSummary>,
@@ -31,6 +31,11 @@ const inventoryApi = {
     ipcRenderer.on('updates:status', listener)
     return () => ipcRenderer.removeListener('updates:status', listener)
   },
+  supabaseStatus: () => ipcRenderer.invoke('supabase:status') as Promise<SyncStatus>,
+  supabaseSignIn: (email: string, password: string) => ipcRenderer.invoke('supabase:sign-in', email, password) as Promise<SyncStatus>,
+  supabaseSignUp: (email: string, password: string) => ipcRenderer.invoke('supabase:sign-up', email, password) as Promise<SyncStatus>,
+  supabaseSignOut: () => ipcRenderer.invoke('supabase:sign-out') as Promise<SyncStatus>,
+  supabaseSync: () => ipcRenderer.invoke('supabase:sync') as Promise<SyncStatus>,
 }
 
 contextBridge.exposeInMainWorld('inventory', inventoryApi)

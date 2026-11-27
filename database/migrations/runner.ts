@@ -4,6 +4,7 @@ import { equipmentMaintenanceMigration } from './003-equipment-maintenance'
 import { passwordManagerMigration } from './004-password-manager'
 import { pendingNotesMigration } from './005-pending-notes'
 import { equipmentDeviceTypesMigration } from './006-equipment-device-types'
+import { syncMetadataMigration } from './007-sync-metadata'
 
 export interface Migration {
   id: string
@@ -15,7 +16,7 @@ interface MigrationDatabase {
   prepare<T>(sql: string): { all(...params: unknown[]): T[] }
 }
 
-const migrations: Migration[] = [initialSchemaMigration, equipmentSpecificationsMigration, equipmentMaintenanceMigration, passwordManagerMigration, pendingNotesMigration, equipmentDeviceTypesMigration]
+const migrations: Migration[] = [initialSchemaMigration, equipmentSpecificationsMigration, equipmentMaintenanceMigration, passwordManagerMigration, pendingNotesMigration, equipmentDeviceTypesMigration, syncMetadataMigration]
 
 export function runMigrations(database: MigrationDatabase): void {
   database.exec(`

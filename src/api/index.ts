@@ -22,4 +22,9 @@ export const inventoryApi = {
   savePendingNote: (input: PendingNoteInput, id?: number) => window.inventory.savePendingNote(input, id),
   deletePendingNote: (id: number) => window.inventory.deletePendingNote(id),
   exportInventoryPdf: () => window.inventory.exportInventoryPdf(),
+  supabaseStatus: () => window.inventory.supabaseStatus(),
+  supabaseSignIn: (email: string, password: string) => window.inventory.supabaseSignIn(email, password),
+  supabaseSignUp: (email: string, password: string) => window.inventory.supabaseSignUp(email, password),
+  supabaseSignOut: () => window.inventory.supabaseSignOut(),
+  supabaseSync: () => window.inventory.supabaseSync(),
 }

@@ -1,4 +1,4 @@
-import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, PendingNote, PendingNoteInput, UpdateStatus } from './types'
+import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, PendingNote, PendingNoteInput, UpdateStatus, SyncStatus } from './types'
 
 declare global {
   interface Window {
@@ -28,6 +28,11 @@ declare global {
       downloadUpdate(): Promise<void>
       installUpdate(): Promise<void>
       onUpdateStatus(callback: (status: UpdateStatus) => void): () => void
+      supabaseStatus(): Promise<SyncStatus>
+      supabaseSignIn(email: string, password: string): Promise<SyncStatus>
+      supabaseSignUp(email: string, password: string): Promise<SyncStatus>
+      supabaseSignOut(): Promise<SyncStatus>
+      supabaseSync(): Promise<SyncStatus>
     }
   }
 }

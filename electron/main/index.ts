@@ -6,6 +6,7 @@ import { SqliteInventoryRepository } from '../../database/repository/sqlite-inve
 import { generateInventoryReportHtml } from './inventory-report'
 import { registerInventoryHandlers } from './inventory-ipc'
 import { registerUpdateHandlers } from './updates'
+import { registerSupabaseHandlers } from './supabase-sync'
 
 let repository: SqliteInventoryRepository
 
@@ -64,6 +65,7 @@ app.whenReady().then(async () => {
     }
   })
   registerUpdateHandlers()
+  registerSupabaseHandlers(repository)
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

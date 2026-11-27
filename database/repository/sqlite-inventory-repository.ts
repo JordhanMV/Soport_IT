@@ -1,6 +1,7 @@
 import initSqlJs, { Database as SqlDatabase, SqlValue } from 'sql.js'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { runMigrations } from '../migrations/runner'
 import type { ComponentInput, DashboardSummary, Equipment, EquipmentInput, InventoryComponent, PasswordEntry, PasswordInput, Person, PersonInput, Area, PendingNote, PendingNoteInput } from '../../src/shared/types'
 
@@ -82,11 +83,137 @@ export class SqliteInventoryRepository {
     const db = new PersistedSqlJsDatabase(database, filePath)
     db.pragma('foreign_keys = ON')
     runMigrations(db)
-    return new SqliteInventoryRepository(db)
+    const repository = new SqliteInventoryRepository(db)
+    repository.ensureSyncIds()
+    return repository
   }
 
   close(): void {
     this.db.close()
+  }
+
+  ensureSyncIds(): void {
+    for (const table of ['areas', 'people', 'equipment', 'components', 'pending_notes']) {
+      const rows = this.db.prepare<{ id: number }>(`SELECT id FROM ${table} WHERE sync_id IS NULL`).all()
+      for (const row of rows) {
+        this.db.prepare(`UPDATE ${table} SET sync_id = ?, sync_updated_at = COALESCE(sync_updated_at, datetime('now')) WHERE id = ?`)
+          .run(randomUUID(), row.id)
+      }
+    }
+  }
+
+  syncSnapshot(): {
+    areas: SyncRow[]; people: SyncRow[]; equipment: SyncRow[]; components: SyncRow[]; pendingNotes: SyncRow[]
+  } {
+    this.ensureSyncIds()
+    return {
+      areas: this.db.prepare<SyncRow>(`SELECT id, sync_id AS syncId, name, created_at AS createdAt,
+        COALESCE(sync_updated_at, created_at) AS syncUpdatedAt, sync_deleted AS syncDeleted FROM areas`).all(),
+      people: this.db.prepare<SyncRow>(`SELECT p.id, p.sync_id AS syncId, p.name, p.email, p.phone,
+        a.sync_id AS areaSyncId, p.status, p.created_at AS createdAt,
+        COALESCE(p.sync_updated_at, p.created_at) AS syncUpdatedAt, p.sync_deleted AS syncDeleted
+        FROM people p LEFT JOIN areas a ON a.id = p.area_id`).all(),
+      equipment: this.db.prepare<SyncRow>(`SELECT e.id, e.sync_id AS syncId, e.asset_tag AS assetTag,
+        p.sync_id AS personSyncId, e.device_type AS deviceType, e.laptop_brand AS laptopBrand,
+        e.processor, e.memory_gb AS memoryGb, e.graphics_card AS graphicsCard,
+        e.disk_capacity_gb AS diskCapacityGb, e.disk_type AS diskType,
+        e.operating_system AS operatingSystem, e.maintenance_done AS maintenanceDone,
+        e.last_maintenance_date AS lastMaintenanceDate, e.status, e.notes,
+        e.created_at AS createdAt, COALESCE(e.sync_updated_at, e.created_at) AS syncUpdatedAt,
+        e.sync_deleted AS syncDeleted FROM equipment e LEFT JOIN people p ON p.id = e.person_id`).all(),
+      components: this.db.prepare<SyncRow>(`SELECT c.id, c.sync_id AS syncId, c.name, c.category,
+        c.brand, c.model, c.serial_number AS serialNumber, e.sync_id AS equipmentSyncId,
+        c.created_at AS createdAt, COALESCE(c.sync_updated_at, c.created_at) AS syncUpdatedAt,
+        c.sync_deleted AS syncDeleted FROM components c LEFT JOIN equipment e ON e.id = c.equipment_id`).all(),
+      pendingNotes: this.db.prepare<SyncRow>(`SELECT id, sync_id AS syncId, title, content,
+        completed, created_at AS createdAt, COALESCE(sync_updated_at, created_at) AS syncUpdatedAt,
+        sync_deleted AS syncDeleted FROM pending_notes`).all(),
+    }
+  }
+
+  mergeRemote(entityType: 'areas' | 'people' | 'equipment' | 'components' | 'pendingNotes', rows: SyncRow[]): void {
+    for (const row of rows) {
+      const syncId = String(row.id)
+      const deleted = Boolean(row.deleted_at)
+      if (deleted) {
+        const table = entityType === 'pendingNotes' ? 'pending_notes' : entityType
+        this.db.prepare(`UPDATE ${table} SET sync_deleted = 1 WHERE sync_id = ?`).run(syncId)
+        continue
+      }
+      const updatedAt = String(row.updated_at || row.created_at || new Date().toISOString())
+      if (entityType === 'areas') {
+        const existing = this.db.prepare<{ id: number }>('SELECT id FROM areas WHERE sync_id = ?').get(syncId)
+        if (existing) this.db.prepare('UPDATE areas SET name = ?, sync_updated_at = ?, sync_deleted = 0 WHERE sync_id = ?')
+          .run(row.name, updatedAt, syncId)
+        else this.db.prepare('INSERT INTO areas (name, sync_id, sync_updated_at) VALUES (?, ?, ?)')
+          .run(row.name, syncId, updatedAt)
+      } else if (entityType === 'people') {
+        const existing = this.db.prepare<{ id: number }>('SELECT id FROM people WHERE sync_id = ?').get(syncId)
+        const areaId = row.area_id
+          ? this.db.prepare<{ id: number }>('SELECT id FROM areas WHERE sync_id = ?').get(String(row.area_id))?.id ?? null
+          : null
+        if (existing) this.db.prepare('UPDATE people SET name = ?, email = ?, phone = ?, area_id = ?, status = ?, sync_updated_at = ?, sync_deleted = 0 WHERE sync_id = ?')
+          .run(row.name, row.email || '', row.phone || '', areaId, row.status || 'Activo', updatedAt, syncId)
+        else this.db.prepare('INSERT INTO people (name, email, phone, area_id, status, sync_id, sync_updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+          .run(row.name, row.email || '', row.phone || '', areaId, row.status || 'Activo', syncId, updatedAt)
+      } else if (entityType === 'equipment') {
+        const existing = this.db.prepare<{ id: number }>('SELECT id FROM equipment WHERE sync_id = ?').get(syncId)
+        const personId = row.person_id
+          ? this.db.prepare<{ id: number }>('SELECT id FROM people WHERE sync_id = ?').get(String(row.person_id))?.id ?? null
+          : null
+        const values = [row.asset_tag, personId, row.device_type || 'Escritorio', row.laptop_brand || '',
+          row.processor || '', row.memory_gb ?? null, row.graphics_card || '', row.disk_capacity_gb ?? null,
+          row.disk_type || null, row.operating_system || null, row.maintenance_done ? 1 : 0,
+          row.last_maintenance_date || null, row.status || 'Operativo', row.notes || '', updatedAt, syncId]
+        if (existing) this.db.prepare(`UPDATE equipment SET asset_tag = ?, person_id = ?, device_type = ?, laptop_brand = ?,
+          processor = ?, memory_gb = ?, graphics_card = ?, disk_capacity_gb = ?, disk_type = ?,
+          operating_system = ?, maintenance_done = ?, last_maintenance_date = ?, status = ?, notes = ?,
+          sync_updated_at = ?, sync_deleted = 0 WHERE sync_id = ?`).run(...values)
+        else this.db.prepare(`INSERT INTO equipment (asset_tag, person_id, device_type, laptop_brand, processor,
+          memory_gb, graphics_card, disk_capacity_gb, disk_type, operating_system, maintenance_done,
+          last_maintenance_date, status, notes, sync_id, sync_updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(...values)
+      } else if (entityType === 'components') {
+        const existing = this.db.prepare<{ id: number }>('SELECT id FROM components WHERE sync_id = ?').get(syncId)
+        const equipmentId = row.equipment_id
+          ? this.db.prepare<{ id: number }>('SELECT id FROM equipment WHERE sync_id = ?').get(String(row.equipment_id))?.id ?? null
+          : null
+        if (existing) this.db.prepare(`UPDATE components SET name = ?, category = ?, brand = ?, model = ?,
+          serial_number = ?, equipment_id = ?, sync_updated_at = ?, sync_deleted = 0 WHERE sync_id = ?`)
+          .run(row.name, row.category, row.brand || '', row.model || '', row.serial_number || '', equipmentId, updatedAt, syncId)
+        else this.db.prepare(`INSERT INTO components (name, category, brand, model, serial_number, equipment_id, sync_id, sync_updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(row.name, row.category, row.brand || '', row.model || '', row.serial_number || '', equipmentId, syncId, updatedAt)
+      } else {
+        const existing = this.db.prepare<{ id: number }>('SELECT id FROM pending_notes WHERE sync_id = ?').get(syncId)
+        if (existing) this.db.prepare(`UPDATE pending_notes SET title = ?, content = ?, completed = ?, sync_updated_at = ?, sync_deleted = 0 WHERE sync_id = ?`)
+          .run(row.title, row.content || '', row.completed ? 1 : 0, updatedAt, syncId)
+        else this.db.prepare(`INSERT INTO pending_notes (title, content, completed, sync_id, sync_updated_at) VALUES (?, ?, ?, ?, ?)`)
+          .run(row.title, row.content || '', row.completed ? 1 : 0, syncId, updatedAt)
+      }
+    }
+  }
+
+  queueSyncDelete(entityType: 'areas' | 'people' | 'equipment' | 'components' | 'pending_notes', id: number): void {
+    const table = entityType
+    const row = this.db.prepare<{ sync_id: string }>(`SELECT sync_id FROM ${table} WHERE id = ?`).get(id)
+    if (row?.sync_id) {
+      this.db.prepare('INSERT INTO sync_queue (entity_type, entity_id, sync_id, operation) VALUES (?, ?, ?, ?)')
+        .run(entityType, id, row.sync_id, 'delete')
+    }
+  }
+
+  syncQueue(): { id: number; entityType: string; syncId: string }[] {
+    return this.db.prepare<{ id: number; entityType: string; syncId: string }>(`
+      SELECT id, entity_type AS entityType, sync_id AS syncId
+      FROM sync_queue WHERE operation = 'delete' AND sync_id IS NOT NULL
+      ORDER BY id
+    `).all()
+  }
+
+  clearSyncQueue(ids: number[]): void {
+    for (const id of ids) this.db.prepare('DELETE FROM sync_queue WHERE id = ?').run(id)
   }
 
   dashboard(): DashboardSummary {
@@ -118,7 +245,7 @@ export class SqliteInventoryRepository {
     const areaId = input.areaId || null
     if (areaId && !this.db.prepare('SELECT id FROM areas WHERE id = ?').get(areaId)) throw new Error('El área seleccionada ya no existe.')
     if (id) {
-      const result = this.db.prepare('UPDATE people SET name = ?, email = ?, phone = ?, area_id = ?, status = ? WHERE id = ?')
+      const result = this.db.prepare('UPDATE people SET name = ?, email = ?, phone = ?, area_id = ?, status = ?, sync_updated_at = datetime(\'now\') WHERE id = ?')
         .run(name, clean(input.email), clean(input.phone), areaId, input.status, id)
       if (!result.changes) throw new Error('No se encontró la persona.')
       return this.listPeople('').find((person) => person.id === id)!
@@ -129,6 +256,7 @@ export class SqliteInventoryRepository {
   }
 
   deletePerson(id: number): void {
+    this.queueSyncDelete('people', id)
     const result = this.db.prepare('DELETE FROM people WHERE id = ?').run(id)
     if (!result.changes) throw new Error('No se encontró la persona.')
   }
@@ -167,7 +295,7 @@ export class SqliteInventoryRepository {
     if (id) {
       const result = this.db.prepare(`UPDATE equipment SET asset_tag = ?, person_id = ?, device_type = ?, laptop_brand = ?,
         processor = ?, memory_gb = ?, graphics_card = ?, disk_capacity_gb = ?, disk_type = ?,
-        operating_system = ?, maintenance_done = ?, last_maintenance_date = ?, status = ?, notes = ? WHERE id = ?`)
+        operating_system = ?, maintenance_done = ?, last_maintenance_date = ?, status = ?, notes = ?, sync_updated_at = datetime('now') WHERE id = ?`)
         .run(assetTag, input.personId || null, input.deviceType, laptopBrand, processor, finalMemoryGb,
           graphicsCard, finalDiskCapacityGb, diskType, operatingSystem,
           input.maintenanceDone ? 1 : 0, lastMaintenanceDate, input.status, clean(input.notes), id)
@@ -185,6 +313,7 @@ export class SqliteInventoryRepository {
   }
 
   deleteEquipment(id: number): void {
+    this.queueSyncDelete('equipment', id)
     const result = this.db.prepare('DELETE FROM equipment WHERE id = ?').run(id)
     if (!result.changes) throw new Error('No se encontró el equipo.')
   }
@@ -205,7 +334,7 @@ export class SqliteInventoryRepository {
     const category = required(input.category, 'La categoría es obligatoria.')
     if (input.equipmentId && !this.db.prepare('SELECT id FROM equipment WHERE id = ?').get(input.equipmentId)) throw new Error('El equipo seleccionado ya no existe.')
     if (id) {
-      const result = this.db.prepare('UPDATE components SET name = ?, category = ?, brand = ?, model = ?, serial_number = ?, equipment_id = ? WHERE id = ?')
+      const result = this.db.prepare('UPDATE components SET name = ?, category = ?, brand = ?, model = ?, serial_number = ?, equipment_id = ?, sync_updated_at = datetime(\'now\') WHERE id = ?')
         .run(name, category, clean(input.brand), clean(input.model), clean(input.serialNumber), input.equipmentId || null, id)
       if (!result.changes) throw new Error('No se encontró el componente.')
     } else {
@@ -218,6 +347,7 @@ export class SqliteInventoryRepository {
   }
 
   deleteComponent(id: number): void {
+    this.queueSyncDelete('components', id)
     const result = this.db.prepare('DELETE FROM components WHERE id = ?').run(id)
     if (!result.changes) throw new Error('No se encontró el componente.')
   }
@@ -229,7 +359,7 @@ export class SqliteInventoryRepository {
   saveArea(value: string, id?: number): Area {
     const name = required(value, 'El nombre del área es obligatorio.')
     if (id) {
-      const result = this.db.prepare('UPDATE areas SET name = ? WHERE id = ?').run(name, id)
+      const result = this.db.prepare('UPDATE areas SET name = ?, sync_updated_at = datetime(\'now\') WHERE id = ?').run(name, id)
       if (!result.changes) throw new Error('No se encontró el área.')
     } else {
       this.db.prepare('INSERT INTO areas (name) VALUES (?)').run(name)
@@ -240,6 +370,7 @@ export class SqliteInventoryRepository {
   }
 
   deleteArea(id: number): void {
+    this.queueSyncDelete('areas', id)
     const result = this.db.prepare('DELETE FROM areas WHERE id = ?').run(id)
     if (!result.changes) throw new Error('No se encontró el área.')
   }
@@ -308,7 +439,7 @@ export class SqliteInventoryRepository {
     const title = required(input.title, 'El título de la nota es obligatorio.')
     if (id) {
       const result = this.db.prepare(`
-        UPDATE pending_notes SET title = ?, content = ?, completed = ?, updated_at = datetime('now')
+        UPDATE pending_notes SET title = ?, content = ?, completed = ?, updated_at = datetime('now'), sync_updated_at = datetime('now')
         WHERE id = ?
       `).run(title, clean(input.content), input.completed ? 1 : 0, id)
       if (!result.changes) throw new Error('No se encontró la nota.')
@@ -323,9 +454,21 @@ export class SqliteInventoryRepository {
   }
 
   deletePendingNote(id: number): void {
+    this.queueSyncDelete('pending_notes', id)
     const result = this.db.prepare('DELETE FROM pending_notes WHERE id = ?').run(id)
     if (!result.changes) throw new Error('No se encontró la nota.')
   }
+}
+
+interface SyncRow {
+  [key: string]: unknown
+  id?: unknown
+  syncId?: unknown
+  syncUpdatedAt?: unknown
+  syncDeleted?: unknown
+  deleted_at?: unknown
+  updated_at?: unknown
+  created_at?: unknown
 }
 
 function clean(value: string | null | undefined): string {

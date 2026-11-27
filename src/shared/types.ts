@@ -87,6 +87,13 @@ export interface DashboardSummary {
   recentEquipment: Equipment[]
 }
 
+export interface SyncStatus {
+  state: 'idle' | 'signed-out' | 'signed-in' | 'syncing' | 'synced' | 'error'
+  email?: string
+  message?: string
+  synchronizedAt?: string
+}
+
 export type PersonInput = Pick<Person, 'name' | 'email' | 'phone' | 'areaId' | 'status'>
 export type EquipmentInput = Pick<Equipment, 'assetTag' | 'personId' | 'deviceType' | 'laptopBrand' | 'processor' | 'memoryGb' | 'graphicsCard' | 'diskCapacityGb' | 'diskType' | 'operatingSystem' | 'maintenanceDone' | 'lastMaintenanceDate' | 'status' | 'notes'>
 export type ComponentInput = Pick<InventoryComponent, 'name' | 'category' | 'brand' | 'model' | 'serialNumber' | 'equipmentId'>

@@ -1,6 +1,6 @@
 {
   "name": "inventario-soporte-escritorio",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "private": true,
   "description": "Inventario local de soporte técnico para Windows",
   "main": "out/main/index.js",
@@ -15,16 +15,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
     "electron-updater": "^6.6.2",
     "sql.js": "^1.13.0"
   },
   "devDependencies": {
     "@fluentui/react-components": "^9.68.0",
     "@fluentui/react-icons": "^2.0.312",
-    "@types/sql.js": "^1.4.9",
     "@types/node": "^22.15.30",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
+    "@types/sql.js": "^1.4.9",
     "@vitejs/plugin-react": "^4.5.2",
     "electron": "^36.4.0",
     "electron-builder": "^26.0.12",
@@ -39,14 +40,23 @@
   "build": {
     "appId": "mx.soporte.inventario",
     "productName": "Inventario de soporte",
-    "directories": { "output": "release" },
-    "files": ["out/**/*", "package.json"],
-    "win": { "target": "nsis" },
-    "publish": [{
-      "provider": "github",
-      "owner": "JordhanMV",
-      "repo": "Soport_IT",
-      "releaseType": "release"
-    }]
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "JordhanMV",
+        "repo": "Soport_IT",
+        "releaseType": "release"
+      }
+    ]
   }
 }

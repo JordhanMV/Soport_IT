@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { Desktop20Regular, People20Regular, Home20Regular, Memory16Regular, Building20Regular, Key20Regular, Note20Regular, WeatherMoon20Regular, WeatherSunny20Regular } from '@fluentui/react-icons'
 import { Button } from '@fluentui/react-components'
 import { UpdateNotice } from './UpdateNotice'
+import { SupabaseSync } from './SupabaseSync'
 import { useTheme } from '../theme'
 
 const links = [
@@ -36,6 +37,7 @@ export function Shell({ children }: PropsWithChildren) {
             {themeName === 'dark' ? 'Modo claro' : 'Modo oscuro'}
           </Button>
           <Button size="small" appearance="subtle" onClick={() => void window.inventory.checkForUpdates()}>Buscar actualizaciones</Button>
+          <SupabaseSync />
           <div className="local-indicator"><span className="online-dot" /> Base de datos local</div>
         </div>
       </header>

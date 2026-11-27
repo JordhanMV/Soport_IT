@@ -9,3 +9,5 @@ Las migraciones ordenadas se declaran como módulos TypeScript `NNN-descripcion.
 `003-equipment-maintenance.ts` agrega el sistema operativo Windows, el indicador de mantenimiento realizado y su fecha; los equipos ya registrados se conservan con esos datos sin especificar y mantenimiento pendiente.
 
 `006-equipment-device-types.ts` amplía el inventario a impresoras y monitores. Conserva los equipos existentes y permite asignar varios periféricos a una misma persona.
+
+`007-sync-metadata.ts` agrega identificadores UUID locales, marcas de actualización y una cola offline para la sincronización con Supabase.
