@@ -1,6 +1,6 @@
 {
   "name": "inventario-soporte-escritorio",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "private": true,
   "description": "Inventario local de soporte técnico para Windows",
   "main": "out/main/index.js",

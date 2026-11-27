@@ -148,7 +148,7 @@ async function synchronize(client: SupabaseClient, repository: SqliteInventoryRe
 
     return { state: 'synced', email: userData.user.email ?? undefined, synchronizedAt: new Date().toISOString() }
   } catch (error) {
-    return { state: 'error', message: error instanceof Error ? error.message : 'La sincronización falló.' }
+    return { state: 'error', message: describeError(error) }
   }
 }
 
@@ -159,7 +159,8 @@ async function processDeletes(client: SupabaseClient, repository: SqliteInventor
   for (const item of queue) {
     const table = item.entityType === 'pending_notes' ? 'pending_notes' : item.entityType
     const { error } = await client.from(table).update({ deleted_at: new Date().toISOString() }).eq('id', item.syncId)
-    if (!error) cleared.push(item.id)
+    if (error) throw new Error(`No se pudo sincronizar la eliminación en ${table}: ${describeError(error)}`)
+    cleared.push(item.id)
   }
   repository.clearSyncQueue(cleared)
 }
@@ -174,13 +175,13 @@ async function pushTable(
   map: (row: SyncRow) => SyncRow,
 ): Promise<void> {
   const { data: remoteRows, error: fetchError } = await client.from(table).select('id,updated_at,deleted_at').eq('owner_id', ownerId)
-  if (fetchError) throw fetchError
+  if (fetchError) throw new Error(`No se pudieron consultar ${table}: ${describeError(fetchError)}`)
   const remote = new Map((remoteRows ?? []).map((row) => [row.id, row]))
   const toPush = rows.filter((row) => !row.syncDeleted && (!remote.has(row.syncId) ||
     Date.parse(String(row.syncUpdatedAt)) >= Date.parse(String(remote.get(row.syncId)?.updated_at ?? 0))))
   if (!toPush.length) return
   const { error } = await client.from(table).upsert(toPush.map(map), { onConflict: 'id' })
-  if (error) throw error
+  if (error) throw new Error(`No se pudieron guardar datos en ${table}: ${describeError(error)}`)
 }
 
 async function pullTable(
@@ -191,11 +192,23 @@ async function pullTable(
   repository: SqliteInventoryRepository,
 ): Promise<void> {
   const { data: remoteRows, error } = await client.from(table).select('*')
-  if (error) throw error
+  if (error) throw new Error(`No se pudieron descargar datos de ${table}: ${describeError(error)}`)
   const local = new Map(localRows.map((row) => [String(row.syncId), String(row.syncUpdatedAt)]))
   const newer = (remoteRows ?? []).filter((row) => {
     const localUpdated = local.get(row.id)
     return !localUpdated || Date.parse(row.updated_at ?? row.created_at) >= Date.parse(localUpdated)
   })
   if (newer.length) repository.mergeRemote(entityType, newer)
+}
+
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  if (error && typeof error === 'object') {
+    const details = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown }
+    const parts = [details.message, details.details, details.hint, details.code]
+      .filter((part): part is string => typeof part === 'string' && part.length > 0)
+    if (parts.length) return parts.join(' — ')
+  }
+  return String(error)
 }
