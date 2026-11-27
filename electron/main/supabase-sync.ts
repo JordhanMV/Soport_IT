@@ -5,8 +5,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { SqliteInventoryRepository } from '../../database/repository/sqlite-inventory-repository'
 import type { SyncStatus } from '../../src/shared/types'
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL
-const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://khgqpszngxllwizwzncv.supabase.co'
+const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_r2vL2edYpRsaHC0BrBEaBg_LiPOSbcm'
 
 export function registerSupabaseHandlers(repository: SqliteInventoryRepository): void {
   let status: SyncStatus = { state: 'idle' }
